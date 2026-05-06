@@ -107,7 +107,7 @@ Service nào gọi đến service này?
 ## 8. Sơ đồ minh họa
 
 Có thể vẽ bằng Mermaid, draw.io, Ludichart hoặc ảnh chụp sơ đồ.
-
+https://lucid.app/lucidchart/91e13ba9-91da-4c17-a93a-1ceeb7b76d40/edit?viewport_loc=-2227%2C-707%2C3488%2C1911%2C0_0&invitationId=inv_5f6f8537-e8d1-49b4-9e63-27ef05970c36
 ```mermaid
 flowchart LR
     User[Actor] --> Service[Service của nhóm]
