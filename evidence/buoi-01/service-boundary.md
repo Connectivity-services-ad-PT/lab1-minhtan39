@@ -7,6 +7,13 @@
 - Public port for class demo: `8000`
 - Required health endpoint: `GET /health`
 
+## Actor
+
+- Campus camera device: captures frames and sends frame payloads to Camera Stream.
+- Security operator: reviews frame history and analysis results during a campus incident.
+- AI Vision service: receives selected frames from Camera Stream for object/person detection.
+- Analytics service: receives camera events for aggregate reporting and KPI dashboards.
+
 ## Responsibility
 
 Camera Stream owns the ingestion of camera frames from campus cameras. It validates frame metadata, records accepted frames, triggers AI Vision when motion is detected, and publishes camera events to Analytics for aggregation.
