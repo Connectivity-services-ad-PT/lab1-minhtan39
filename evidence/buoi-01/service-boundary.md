@@ -1,115 +1,66 @@
-# Service Boundary của nhóm
+# Service Boundary - Team Camera Stream
 
-## 1. Thông tin nhóm
+## Service
 
-- Tên nhóm:1B
-- Lớp:CNTT17-10
-- Thành viên:Lê Minh tân, Nguyễn Hoàng Thái, Nguyễn Văn Thắng
-- Service nhóm phụ trách:Camera stream
-- Sản phẩm tổng thể của lớp:
+- Team: `team-camera`
+- Service name: `camera-stream`
+- Public port for class demo: `8000`
+- Required health endpoint: `GET /health`
 
-## 2. Actor
+## Responsibility
 
-Ai tương tác với hệ thống/service?
+Camera Stream owns the ingestion of camera frames from campus cameras. It validates frame metadata, records accepted frames, triggers AI Vision when motion is detected, and publishes camera events to Analytics for aggregation.
 
-- Users/Clients (những người xem camera)
-- Camera devices (các thiết bị camera phần cứng)
-- Admin (quản trị viên hệ thống)
-- Mobile/Web applications (các ứng dụng gọi API)
+## In Scope
 
-## 3. System Boundary
+- Accept frame metadata and base64 image payloads.
+- Keep a lightweight in-memory frame history for lab testing.
+- Call AI Vision through REST sync: `POST /api/v1/detect`.
+- Publish camera analytics events through REST/queue-compatible payload: `POST /api/v1/events`.
+- Return Problem Details for validation, auth, timeout, and dependency errors.
 
-Nhóm em xây phần nào?
+## Out of Scope
 
-Phần nhóm kiểm soát:
+- Training or hosting a real computer-vision model.
+- Long-term video storage.
+- Real camera hardware integration.
+- User management and role policy.
 
-- API service nhận và xử lý yêu cầu stream camera
-- Database lưu trữ thông tin camera và cấu hình
-- Authentication/Authorization service
-- Streaming gateway (RTMP/HLS streaming protocol)
-- Logging và monitoring service
+## Main Inputs
 
-Phần nhóm chỉ tích hợp:
+```json
+{
+  "camera_id": "CAM-A01",
+  "location": "Main lobby",
+  "frame_format": "jpeg",
+  "image_base64": "dGVzdC1pbWFnZS1mcmFtZQ==",
+  "captured_at": "2026-05-13T08:30:00+07:00",
+  "motion_score": 0.82
+}
+```
 
-- Hardware camera devices (chỉ tích hợp, không quản lý)
-- Message queue (nếu có)
-- Notification service (nếu cần thông báo)
+## Main Outputs
 
-## 4. Service Boundary
+```json
+{
+  "frame_id": "FR-20260513-0001",
+  "camera_id": "CAM-A01",
+  "accepted": true,
+  "motion_level": "high",
+  "created_at": "2026-05-13T01:30:00Z"
+}
+```
 
-Service của nhóm có trách nhiệm gì?
+## Dependencies
 
-- Nhận yêu cầu stream từ clients
-- Xác thực và phân quyền truy cập camera
-- Kết nối và lấy dữ liệu từ camera devices
-- Xử lý và encode video stream
-- Cung cấp stream qua các protocol (RTMP, HLS, DASH)
-- Quản lý và cấu hình camera
-- Ghi lại thông tin truy cập và lỗi
+| Consumer | Provider | Mechanism | Purpose |
+|---|---|---|---|
+| Camera Stream | AI Vision | REST sync | Send frame to `/api/v1/detect` when analysis is requested |
+| Camera Stream | Analytics | Queue async compatible event payload | Feed camera events for aggregate KPI |
 
-Service KHÔNG làm gì?
+## Demo Readiness Notes
 
-- Không quản lý hardware camera trực tiếp
-- Không xử lý video analytics hoặc AI detection
-- Không lưu trữ video file dài hạn (chỉ stream live)
-- Không xử lý yêu cầu từ các service không được xác thực
-
-## 5. Input / Output
-
-### Input
-
-- Stream request từ client (camera ID, authentication token)
-- Camera configuration data (URL, credentials, resolution)
-- Control commands (start/stop streaming, adjust quality)
-- User authentication credentials
-
-### Output
-
-- Live video stream (H.264/H.265 encoded)
-- Stream metadata (bitrate, resolution, FPS)
-- Camera status information
-- Error/failure responses
-- Authentication tokens
-
-## 6. API dự kiến
-
-| Method | Endpoint | Mục đích |
-|---|---|---|
-| GET | /health | Kiểm tra service hoạt động |
-| GET | /cameras | Lấy danh sách camera |
-| GET | /cameras/{id} | Lấy thông tin chi tiết camera |
-| POST | /cameras | Thêm camera mới |
-| PUT | /cameras/{id} | Cập nhật thông tin camera |
-| DELETE | /cameras/{id} | Xóa camera |
-| GET | /stream/{cameraId} | Lấy video stream (WebRTC/RTMP) |
-| POST | /stream/{cameraId}/start | Bắt đầu stream |
-| POST | /stream/{cameraId}/stop | Dừng stream |
-| GET | /cameras/{id}/status | Kiểm tra trạng thái camera |
-| POST | /auth/login | Xác thực người dùng |
-| POST | /auth/logout | Đăng xuất |
-
-## 7. Phụ thuộc service khác
-
-Service này gọi đến service nào?
-
-- Authentication Service (xác thực người dùng)
-- User/Permission Service (kiểm tra quyền truy cập)
-- Notification Service (thông báo sự kiện)
-- Logging Service (ghi log hoạt động)
-
-Service nào gọi đến service này?
-
-- Web Application (gọi để lấy stream)
-- Mobile Application (gọi để lấy stream)
-- Monitoring/Dashboard Service (kiểm tra trạng thái)
-- Alert Service (lấy dữ liệu camera để phát hiện sự bất thường)
-
-## 8. Sơ đồ minh họa
-
-Có thể vẽ bằng Mermaid, draw.io, Ludichart hoặc ảnh chụp sơ đồ.
-https://lucid.app/lucidchart/91e13ba9-91da-4c17-a93a-1ceeb7b76d40/edit?viewport_loc=-2227%2C-707%2C3488%2C1911%2C0_0&invitationId=inv_5f6f8537-e8d1-49b4-9e63-27ef05970c36
-```mermaid
-flowchart LR
-    User[Actor] --> Service[Service của nhóm]
-    Service --> DB[(Database)]
-    Service --> Other[Service khác]
+- Bind API to `0.0.0.0`.
+- Publish `8000:8000` in Docker or Compose.
+- Put partner URLs in `.env`, not source code.
+- Use a 3 second upstream timeout so dependency failure does not hang the demo.
